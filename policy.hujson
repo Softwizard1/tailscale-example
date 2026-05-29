@@ -1,0 +1,37 @@
+// Tailscale ACL policy (HuJSON — JSON with comments + trailing commas allowed).
+// Paste this into: Admin console → Access controls → Edit → Save.
+//
+// Model: DEFAULT-DENY. Once an "acls" section exists, anything not explicitly
+// allowed is denied. That is the whole point of the demo: least privilege.
+{
+  // Who is allowed to OWN (advertise) each tag. We (the admin) own all three,
+  // which is what lets the auth key bring nodes up with these tags.
+  "tagOwners": {
+    "tag:backend": ["autogroup:admin"],
+    "tag:client":  ["autogroup:admin"],
+    "tag:dev":     ["autogroup:admin"],
+  },
+
+  "acls": [
+    // The developer (client) may reach the backend's private services ONLY:
+    //   80,443 = web dashboard (via tailscale serve)   5432 = postgres database
+    {
+      "action": "accept",
+      "src":    ["tag:client"],
+      "dst":    ["tag:backend:80,443,5432"],
+    },
+    // NOTE: there is deliberately NO rule for tag:dev → tag:backend.
+    // dev is therefore denied by default. validate.sh proves this for web AND db.
+  ],
+
+  // Tailscale SSH: admin may SSH into any node for debugging. Identity-gated,
+  // no keys to manage, every session is logged in the admin console.
+  "ssh": [
+    {
+      "action": "accept",
+      "src":    ["autogroup:admin"],
+      "dst":    ["tag:backend", "tag:client", "tag:dev"],
+      "users":  ["autogroup:nonroot", "root"],
+    },
+  ],
+}

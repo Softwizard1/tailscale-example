@@ -1,0 +1,120 @@
+# =============================================================================
+# Tailnet Private Service Demo  —  "Secure Remote Developer"  (userspace mode)
+#
+# Runs reliably on Docker Desktop for Mac, which can't give containers a TUN
+# device. So Tailscale runs in USERSPACE mode and we use the patterns that work
+# there — and that Tailscale recommends for containers:
+#
+#   • backend exposes its private services with `tailscale serve`
+#     (tailscaled accepts the tailnet connection and proxies to localhost —
+#      no TUN needed).
+#   • client/dev make OUTBOUND tailnet connections through tailscaled's built-in
+#     SOCKS5 proxy (localhost:1055).
+#
+#   ts-backend (tag:backend)  serve:80→nginx, serve:5432→postgres
+#   ts-client  (tag:client)   ACL ALLOWS  → backend 80,443,5432   (developer)
+#   ts-dev     (tag:dev)       ACL has NO rule → DENIED            (attacker)
+#
+# Each node is on its OWN isolated network, so the tailnet is the only path
+# between them — the ACL governs every connection.
+# =============================================================================
+
+# Validation probes share a node's network namespace so a test runs from that
+# node's tailnet identity. curl + openbsd-nc give us SOCKS5-capable web and TCP
+# checks. (The tailscale node image itself ships no curl.)
+x-probe-base: &probe-base
+  image: postgres:16-alpine
+  entrypoint: ["sh", "-c", "apk add --no-cache curl netcat-openbsd >/dev/null 2>&1 || true; sleep infinity"]
+  profiles: ["probe"]
+  restart: "no"
+
+services:
+  # ---- Backend node: serves the private dashboard + database over the tailnet
+  ts-backend:
+    image: tailscale/tailscale:stable
+    hostname: backend
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_HOSTNAME: backend
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "true"
+      TS_EXTRA_ARGS: "--advertise-tags=tag:backend --ssh"
+      TS_SERVE_CONFIG: /config/serve.json    # publishes nginx:80 + postgres:5432 on the tailnet
+    volumes:
+      - ts-backend-state:/var/lib/tailscale
+      - ./serve.json:/config/serve.json:ro
+    networks: [backend-net]
+    restart: unless-stopped
+
+  app:                                       # private web dashboard (nginx on localhost:80)
+    image: nginx:alpine
+    network_mode: service:ts-backend
+    depends_on: [ts-backend]
+    volumes:
+      - ./app:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
+  db:                                        # private database (postgres on localhost:5432)
+    image: postgres:16-alpine
+    network_mode: service:ts-backend
+    depends_on: [ts-backend]
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: demo-not-a-real-secret
+      POSTGRES_DB: appdb
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # ---- Client node: the authorised developer (outbound via SOCKS5) ----------
+  ts-client:
+    image: tailscale/tailscale:stable
+    hostname: client
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_HOSTNAME: client
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "true"
+      TS_SOCKS5_SERVER: localhost:1055       # outbound tailnet proxy for this node's processes
+      TS_EXTRA_ARGS: "--advertise-tags=tag:client --ssh"
+    volumes:
+      - ts-client-state:/var/lib/tailscale
+    networks: [client-net]
+    restart: unless-stopped
+
+  # ---- Dev node: deliberately UNauthorised --------------------------------
+  ts-dev:
+    image: tailscale/tailscale:stable
+    hostname: dev
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_HOSTNAME: dev
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "true"
+      TS_SOCKS5_SERVER: localhost:1055
+      TS_EXTRA_ARGS: "--advertise-tags=tag:dev --ssh"
+    volumes:
+      - ts-dev-state:/var/lib/tailscale
+    networks: [dev-net]
+    restart: unless-stopped
+
+  # ---- Validation probes (profile: probe) -----------------------------------
+  client-probe:
+    <<: *probe-base
+    network_mode: service:ts-client
+    depends_on: [ts-client]
+  dev-probe:
+    <<: *probe-base
+    network_mode: service:ts-dev
+    depends_on: [ts-dev]
+
+volumes:
+  ts-backend-state:
+  ts-client-state:
+  ts-dev-state:
+  db-data:
+
+networks:
+  backend-net:
+  client-net:
+  dev-net:

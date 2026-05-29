@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Private Service</title>
+<style>body{font-family:-apple-system,system-ui,sans-serif;max-width:640px;margin:4rem auto;padding:0 1.5rem;line-height:1.5;color:#1a1a1a}
+h1{font-size:1.6rem}code{background:#f0f0f0;padding:2px 6px;border-radius:4px}.ok{color:#0a7d28;font-weight:600}</style></head>
+<body>
+<h1>🔒 Internal Service — reachable only over the tailnet</h1>
+<p class="ok">If you can read this, you reached me through Tailscale.</p>
+<p>This nginx instance publishes <strong>no host port</strong> and is <strong>not exposed to the public internet</strong>.
+The only path in is the tailnet identity <code>tag:backend</code>, served over HTTPS by <code>tailscale serve</code>.</p>
+<p>An ACL allows <code>tag:client</code> to reach me on ports 80/443. <code>tag:dev</code> has no such rule, so it is denied by default.</p>
+</body></html>
