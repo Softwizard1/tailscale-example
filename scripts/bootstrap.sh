@@ -20,7 +20,6 @@ if have_compose; then
   grn "✓ Docker Compose present (${DC[*]})"
 else
   red "✗ Docker Compose not found (neither 'docker compose' nor 'docker-compose')"
-  ylw "   Fix on macOS: install/upgrade Docker Desktop (bundles Compose v2),"
   ylw "   or:  brew install docker-compose"
   ok=0
 fi

@@ -1,7 +1,7 @@
 # =============================================================================
 # Tailnet Private Service Demo  —  "Secure Remote Developer"  (userspace mode)
 #
-# Runs reliably on Docker Desktop for Mac, which can't give containers a TUN
+# Runs reliably on Docker, which can't give containers a TUN
 # device. So Tailscale runs in USERSPACE mode and we use the patterns that work
 # there — and that Tailscale recommends for containers:
 #
@@ -66,7 +66,7 @@ services:
       - db-data:/var/lib/postgresql/data
     restart: unless-stopped
 
-  # ---- Client node: the authorised developer (outbound via SOCKS5) ----------
+  # ---- Client node: the authorized developer (outbound via SOCKS5) ----------
   ts-client:
     image: tailscale/tailscale:stable
     hostname: client
@@ -82,7 +82,7 @@ services:
     networks: [client-net]
     restart: unless-stopped
 
-  # ---- Dev node: deliberately UNauthorised --------------------------------
+  # ---- Dev node: deliberately UNauthorized --------------------------------
   ts-dev:
     image: tailscale/tailscale:stable
     hostname: dev

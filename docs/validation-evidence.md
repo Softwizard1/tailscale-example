@@ -36,11 +36,11 @@ All checks passed — the demo is healthy.
 
 ## What each check proves
 
-1. **Developer → dashboard** — the authorised node reaches nginx over the
+1. **Developer → dashboard** — the authorized node reaches nginx over the
    tailnet (HTTP 200), through `tailscale serve` and the SOCKS5 proxy.
-2. **Attacker → dashboard blocked** — the unauthorised node is denied by the
+2. **Attacker → dashboard blocked** — the unauthorized node is denied by the
    default-deny ACL. Only trusted because check 1 first proved the service is up.
-3. **Developer → database** — the authorised node opens a TCP connection to the
+3. **Developer → database** — the authorized node opens a TCP connection to the
    private Postgres on :5432 over the tailnet.
 4. **Attacker → database blocked** — same node, same default-deny.
 5. **No host ports** — `docker compose ps` confirms the backend publishes nothing

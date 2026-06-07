@@ -7,7 +7,7 @@ Per the exercise instructions, an honest account of AI use.
   `policy.hujson` ACL, the demo cockpit, the slide deck, and the docs.
 - A sounding board for architecture trade-offs and for debugging three real
   failures (ACL allow-all override, a Docker-bridge path that bypassed the
-  tailnet, and userspace-mode networking on Docker Desktop).
+  tailnet, and userspace-mode networking on Docker compose).
 
 ## What I reviewed or changed myself
 - Ran the stack on my own tailnet and confirmed all six checks pass.
